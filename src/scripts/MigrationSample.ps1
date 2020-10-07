@@ -16,6 +16,7 @@ $copyProps = @{
     "CopyBehavior"="Overwrite"
     "Recurse"=$true
     "RemoveNotInSource"=$false
+    "ClearAllCaches"=$true
     "Detailed"=$true
     "CheckDependencies"=$false
     "BoringMode"=$false
