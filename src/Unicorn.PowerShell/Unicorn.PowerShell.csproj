@@ -1,0 +1,82 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{723E5166-2466-47EC-AABD-18D24384736E}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Unicorn.PowerShell</RootNamespace>
+    <AssemblyName>Unicorn.PowerShell</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Rainbow, Version=2.1.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Rainbow.Core.2.1.2\lib\net452\Rainbow.dll</HintPath>
+    </Reference>
+    <Reference Include="Rainbow.Storage.Sc, Version=2.1.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Rainbow.Storage.Sc.2.1.2\lib\net452\Rainbow.Storage.Sc.dll</HintPath>
+    </Reference>
+    <Reference Include="Rainbow.Storage.Yaml, Version=2.1.2.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Rainbow.Storage.Yaml.2.1.2\lib\net452\Rainbow.Storage.Yaml.dll</HintPath>
+    </Reference>
+    <Reference Include="Sitecore.Kernel, Version=14.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Sitecore.Kernel.9.3.0\lib\net471\Sitecore.Kernel.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Linq" />
+    <Reference Include="System.Runtime" />
+    <Reference Include="System.Runtime.InteropServices" />
+    <Reference Include="System.Runtime.InteropServices.RuntimeInformation" />
+    <Reference Include="System.Threading.Thread" />
+    <Reference Include="System.Xml" />
+    <Reference Include="Unicorn, Version=4.1.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>packages\Unicorn.Core.4.1.1\lib\net452\Unicorn.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="BulkItemExtractor.cs" />
+    <Compile Include="BulkItemInstaller.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App_Config\Include\Rainbow.config" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.AutoPublish.config" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.config" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.Configs.Default.example" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.Configs.Dependency.config.example" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.Configs.NewItemsOnly.example" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.CustomSerializationFolder.config.example" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.DataProvider.config" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.Dilithium.config.example" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.PowerShell.config" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.Remote.config.disabled" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.UI.config" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.UI.DeployedContentEditorWarnings.config.disabled" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.UI.IdentityServer.config.disabled" />
+    <None Include="App_Config\Include\Unicorn\Unicorn.zSharedSecret.config.example" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

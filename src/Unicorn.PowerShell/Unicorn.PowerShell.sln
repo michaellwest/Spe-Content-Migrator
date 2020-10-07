@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.30204.135
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Unicorn.PowerShell", "Unicorn.PowerShell.csproj", "{723E5166-2466-47EC-AABD-18D24384736E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{723E5166-2466-47EC-AABD-18D24384736E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{723E5166-2466-47EC-AABD-18D24384736E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{723E5166-2466-47EC-AABD-18D24384736E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{723E5166-2466-47EC-AABD-18D24384736E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {04BD893C-0BE5-4814-966D-C6B465D3EFD8}
+	EndGlobalSection
+EndGlobal
