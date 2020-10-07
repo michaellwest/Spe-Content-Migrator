@@ -1,5 +1,7 @@
 ﻿Clear-Host
 
+Import-Module -Name SPE -Force
+
 $scriptDirectory = & {
     if ($psISE) {
         Split-Path -Path $psISE.CurrentFile.FullPath        

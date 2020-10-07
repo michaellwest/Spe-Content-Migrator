@@ -419,6 +419,7 @@ function Copy-RainbowContent {
     $processedCounter = 0
     $keepProcessing = $true
     $stepCount = [Math]::Max(1, [int][Math]::Round(($sourceItemsCount / 10.0)))
+    $processedBytes = 0
     while($keepProcessing) {
         if($currentLevel -lt $treeLevels.Count) {
             if($currentLevel -eq 0) {
@@ -446,7 +447,7 @@ function Copy-RainbowContent {
             $pullLookup[$currentLevel] = $itemIdList
             if($itemIdList.Count -gt 0) {
                 if($bulkCopy) {
-                    Write-Message "[Pull] Level $($currentLevel) with $($itemIdList.Count) item(s)"
+                    Write-Message "[Pull] Level $($currentLevel) with $($itemIdList.Count) item(s)" -Hide:(!$Detailed)
                 }             
                 Write-Message "[Pull] $($currentLevel)" -ForegroundColor Green -Hide:(!$Detailed)
                 $runspaceProps = @{
@@ -465,7 +466,7 @@ function Copy-RainbowContent {
                 }) > $null
             } else {
                 if($bulkCopy) {
-                    Write-Message "[Skip] Level $($currentLevel)" -ForegroundColor Cyan
+                    Write-Message "[Skip] Level $($currentLevel)" -ForegroundColor Cyan -Hide:(!$Detailed)
                 } 
                 if($pushedLookup.Contains($currentLevel) -and $pushedLookup[$currentLevel].Count -eq 0) {
                     $pushedLookup.Remove($currentLevel)
@@ -492,6 +493,7 @@ function Copy-RainbowContent {
             if($currentRunspace.Operation -eq "Pull") {                
                 if(![string]::IsNullOrEmpty($response) -and [regex]::IsMatch($response,"^---")) {               
                     $yaml = $response
+                    $processedBytes += $yaml.Length
                     $pulledIdList = $pullLookup[$currentRunspace.Level]
                     if($pushedLookup.Contains(($currentRunspace.Level - 1))) {
                         Write-Message "[Queue] $($currentRunspace.Level)" -ForegroundColor Cyan -Hide:(!$Detailed)
@@ -547,7 +549,7 @@ function Copy-RainbowContent {
                     $queuedItems.AddRange($pushedLookup[$currentRunspace.Level])
                     $pushedLookup.Remove($currentRunspace.Level) > $null
                     if($bulkCopy) {
-                        Write-Message "[Pull] $($currentRunspace.Level) completed" -ForegroundColor Gray
+                        Write-Message "[Pull] $($currentRunspace.Level) completed" -ForegroundColor Gray -Hide:(!$Detailed)
                     }
                 }
                 if($queuedItems.Count -gt 0) {
@@ -627,8 +629,10 @@ function Copy-RainbowContent {
     $watch.Stop()
     $totalSeconds = $watch.ElapsedMilliseconds / 1000
     Write-Message "[Done] Completed in a record $($totalSeconds) seconds! $(Get-SpecialText -Character 0x1F525)$(Get-SpecialText -Character 0x1F37B)" -ForegroundColor Green
-    Write-Progress -Activity "[Done] Completed in $($totalSeconds) seconds" -Completed
     if($processedItemsHash.Count -gt 0) {
+        if($updateCounter -gt 0) {
+            Write-Message " - Transferred $([Math]::Round($processedBytes / 1MB, 2)) MB of item data"
+        }
         Write-Message "Processed $($processedItemsHash.Count)"
         Write-Message " $(Get-SpecialText -Character 0x2714 -Fallback "-") Updated $($updateCounter)"
         Write-Message " $(Get-SpecialText -Character 0x2714 -Fallback "-") Skipped $($skippedItemsHash.Count)"
