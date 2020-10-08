@@ -1,7 +1,7 @@
 Import-Module -Name SPE -Force
 
 function Copy-RainbowContent {
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess=$true)]
     param(
         [Parameter(Mandatory=$true)]
         [ValidateNotNullOrEmpty()]
@@ -54,6 +54,10 @@ function Copy-RainbowContent {
         } else {
             "$([char]::ConvertFromUtf32($Character))"
         }
+    }
+
+    if($WhatIfPreference) {
+        Write-Message "Following results will be in the WhatIf scenario" -ForegroundColor Yellow
     }
    
     $watch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -411,15 +415,19 @@ function Copy-RainbowContent {
 
     Write-Message "Spinning up jobs to transfer content" -ForegroundColor Green
     
-    $processedItemsHash = [System.Collections.Generic.HashSet[string]]([StringComparer]::OrdinalIgnoreCase)
-    $skippedItemsHash = [System.Collections.Generic.HashSet[string]]([StringComparer]::OrdinalIgnoreCase)
+    $skippedCounter = 0
     $pullLookup = @{}
     $currentLevel = 0
     $totalLevels = $treeLevels.Count
     $processedCounter = 0
-    $keepProcessing = $true
+    
     $stepCount = [Math]::Max(1, [int][Math]::Round(($sourceItemsCount / 10.0)))
+    if($sourceItemsCount -lt 20) {
+        $stepCount = $sourceItemsCount
+    }
     $processedBytes = 0
+
+    $keepProcessing = !$WhatIfPreference
     while($keepProcessing) {
         if($currentLevel -lt $treeLevels.Count) {
             if($currentLevel -eq 0) {
@@ -429,13 +437,12 @@ function Copy-RainbowContent {
             $levelItems = $treeLevels[$currentLevel]
             $pushedLookup.Add($currentLevel, [System.Collections.Generic.List[QueueItem]]@()) > $null
             foreach($levelItem in $levelItems) {
-                $itemId = $levelItem.ItemId
-                $processedItemsHash.Add($itemId) > $null                
+                $itemId = $levelItem.ItemId              
 
                 if(($skipExisting -or $compareRevision) -and $skipItemsHash.Contains($itemId)) {
                     $processedCounter++
                     Write-Message "[Skip] $($itemId)" -ForegroundColor Cyan -Hide:(!$Detailed)
-                    $skippedItemsHash.Add($itemId) > $null
+                    $skippedCounter++
                     if($processedCounter % $stepCount -eq 0) {
                         $percentComplete = [int][Math]::Round((($processedCounter * 100 / $sourceItemsCount))/10.0) * 10
                         if($percentComplete -ne 100) { Write-Message "[Status] $($percentComplete)% complete ($($processedCounter))" }
@@ -583,6 +590,12 @@ function Copy-RainbowContent {
         $keepProcessing = ($currentLevel -lt $treeLevels.Count -or $pullRunspaces.Count -gt 0 -or $pushRunspaces.Count -gt 0)
     }
 
+    if($WhatIfPreference) {
+        $processedCounter = $sourceItemsCount
+        $updateCounter = $sourceItemsCount - $skipItemsHash.Count
+        $skippedCounter = $skipItemsHash.Count
+    }
+
     Write-Message "[Status] 100% complete ($($processedCounter))"
 
     $pullPool.Close() 
@@ -611,7 +624,9 @@ function Copy-RainbowContent {
                 $sd.Dispose() > $null
             }
             $removeNotInSourceScript = [scriptblock]::Create($removeNotInSourceScript.ToString().Replace("{ITEM_IDS}", $itemsNotInSource))
-            Invoke-RemoteScript -ScriptBlock $removeNotInSourceScript -Session $DestinationSession -Raw
+            if(!$WhatIfPreference) {
+                Invoke-RemoteScript -ScriptBlock $removeNotInSourceScript -Session $DestinationSession -Raw
+            }
             Write-Message "- Removed $($removeItemsHash.Count) item(s) from the destination"
             $removedCounter += $removeItemsHash.Count
         }
@@ -622,20 +637,22 @@ function Copy-RainbowContent {
             [Sitecore.Caching.CacheManager]::ClearAllCaches()
         }
 
-        Invoke-RemoteScript -ScriptBlock $clearAllCachesScript -Session $DestinationSession -Raw
+        if(!$WhatIfPreference) {
+            Invoke-RemoteScript -ScriptBlock $clearAllCachesScript -Session $DestinationSession -Raw
+        }
         Write-Message "- Clearing all caches in the destination"
     }
 
     $watch.Stop()
     $totalSeconds = $watch.ElapsedMilliseconds / 1000
     Write-Message "[Done] Completed in a record $($totalSeconds) seconds! $(Get-SpecialText -Character 0x1F525)$(Get-SpecialText -Character 0x1F37B)" -ForegroundColor Green
-    if($processedItemsHash.Count -gt 0) {
+    if($processedCounter -gt 0) {
         if($updateCounter -gt 0) {
             Write-Message " - Transferred $([Math]::Round($processedBytes / 1MB, 2)) MB of item data"
         }
-        Write-Message "Processed $($processedItemsHash.Count)"
+        Write-Message "Processed $($processedCounter)"
         Write-Message " $(Get-SpecialText -Character 0x2714 -Fallback "-") Updated $($updateCounter)"
-        Write-Message " $(Get-SpecialText -Character 0x2714 -Fallback "-") Skipped $($skippedItemsHash.Count)"
+        Write-Message " $(Get-SpecialText -Character 0x2714 -Fallback "-") Skipped $($skippedCounter)"
         if($errorCounter -gt 0) {
             Write-Message " $(Get-SpecialText -Character 0x274C -Fallback "-") Errored $($errorCounter)"
         } else {
