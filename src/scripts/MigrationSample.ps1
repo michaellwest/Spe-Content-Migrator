@@ -15,7 +15,8 @@ $sourceSession = New-ScriptSession -user "Admin" -pass 'b' -conn "https://source
 $destinationSession = New-ScriptSession -user "Admin" -pass 'b' -conn "https://destinationsite.local"
 
 $copyProps = @{
-    "CopyBehavior"="Overwrite"
+    "WhatIf"=$true
+    "CopyBehavior"="CompareRevision"
     "Recurse"=$true
     "RemoveNotInSource"=$false
     "ClearAllCaches"=$true
