@@ -356,10 +356,10 @@ function Copy-RainbowContent {
     }
 
     $pushedLookup = @{}
-    $pullPool = [RunspaceFactory]::CreateRunspacePool(1, 2)
+    $pullPool = [RunspaceFactory]::CreateRunspacePool()
     $pullPool.Open()
     $pullRunspaces = [System.Collections.Generic.List[PSCustomObject]]@()
-    $pushPool = [RunspaceFactory]::CreateRunspacePool(1, 8)
+    $pushPool = [RunspaceFactory]::CreateRunspacePool()
     $pushPool.Open()
     $pushRunspaces = [System.Collections.Generic.List[PSCustomObject]]@()
 
@@ -425,8 +425,9 @@ function Copy-RainbowContent {
     $processedBytes = 0
 
     $keepProcessing = !$WhatIfPreference
+    $loopCounter = 0
     while($keepProcessing) {
-        if($currentLevel -lt $treeLevels.Count) {
+        if($currentLevel -lt $treeLevels.Count -and $pullRunspaces.Count -lt 4) {
             if($currentLevel -eq 0) {
                 Write-Message "[Status] Getting started"
             }
@@ -580,8 +581,16 @@ function Copy-RainbowContent {
                 $currentRunspace.Pipe.Dispose()
                 $pushRunspaces.Remove($currentRunspace) > $null
             }
+
+            $response = $null
+            $currentRunspace = $null
         }
 
+        Start-Sleep -Milliseconds 50
+        $loopCounter++
+        if($loopCounter % 1000 -eq 0) {
+            [GC]::Collect()
+        }
         $keepProcessing = ($currentLevel -lt $treeLevels.Count -or $pullRunspaces.Count -gt 0 -or $pushRunspaces.Count -gt 0)
     }
 
@@ -595,8 +604,10 @@ function Copy-RainbowContent {
 
     $pullPool.Close() 
     $pullPool.Dispose()
+    $pullPool = $null
     $pushPool.Close() 
     $pushPool.Dispose()
+    $pushPool = $null
     $removedCounter = 0
     if($RemoveNotInSource) {
         $removeItemsHash = [System.Collections.Generic.HashSet[string]]([StringComparer]::OrdinalIgnoreCase)
