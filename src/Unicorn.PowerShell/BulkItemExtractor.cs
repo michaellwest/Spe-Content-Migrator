@@ -1,15 +1,16 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 using Rainbow.Filtering;
+using Rainbow.Model;
 using Rainbow.Storage.Yaml;
-using Sitecore.Data;
 using Sitecore.Data.Engines;
-using Sitecore.Data.Events;
-using Sitecore.SecurityModel;
+using Unicorn.PowerShell.Sql;
 
 namespace Unicorn.PowerShell
 {
@@ -49,19 +50,15 @@ namespace Unicorn.PowerShell
             return new YamlSerializationFormatter(doc.DocumentElement, filter);
         }
 
-        private static string ProcessItemId(ID itemId)
+        private static string ProcessIItemData(IItemData item)
         {
-            if (itemId.IsNull) return null;
-            
-            var db = Sitecore.Configuration.Factory.GetDatabase("master");
-            var item = db.GetItem(itemId);
             if (item == null) return null;
 
             var formatter = CreateFormatter(CreateFieldFilter());
-            
+
             using (var stream = new MemoryStream())
             {
-                formatter.WriteSerializedItem(new Rainbow.Storage.Sc.ItemData(item), stream);
+                formatter.WriteSerializedItem(item, stream);
 
                 stream.Seek(0, SeekOrigin.Begin);
 
@@ -72,24 +69,21 @@ namespace Unicorn.PowerShell
             }
         }
 
-        private static List<string> ItemExtractor (BlockingCollection<string> itemsToExtract, CancellationToken cancellationToken)
+        private static List<string> ItemExtractor(BlockingCollection<IItemData> itemsToExtract, CancellationToken cancellationToken)
         {
             Thread.CurrentThread.Priority = ThreadPriority.Lowest;
 
             var yamlItems = new List<string>();
-            using (new BulkUpdateContext())
-            using (new EventDisabler())
-            using (new SecurityDisabler())
             using (new SyncOperationContext())
             {
                 while (!itemsToExtract.IsCompleted)
                 {
-                    if (!itemsToExtract.TryTake(out var itemId, -1))
+                    if (!itemsToExtract.TryTake(out var item, -1))
                     {
                         break;
                     }
 
-                    var yaml = ProcessItemId(ID.Parse(itemId));
+                    var yaml = ProcessIItemData(item);
                     if (!string.IsNullOrEmpty(yaml))
                     {
                         yamlItems.Add(yaml);
@@ -99,16 +93,28 @@ namespace Unicorn.PowerShell
 
             return yamlItems;
         }
-
-        public static string[] LoadItems(string[] itemIds)
+        
+        public static string[] LoadItems(string rootId, string[] itemIds)
         {
+            if (string.IsNullOrEmpty(rootId)) return null;
             if (itemIds == null) return null;
 
+            var db = Sitecore.Configuration.Factory.GetDatabase("master");
+            var item = db.GetItem(rootId);
+            if (item == null) return null;
+
+            var rootParentItemPath = item.Parent.Paths.Path;
+
             var cancellationToken = new CancellationToken();
-            var itemsToExtract = new BlockingCollection<string>();
-            foreach (var itemId in itemIds)
+
+            var yamlItems = new List<string>();
+            var bulkItemExtractor = new SqlItemExtractor("master");
+            var extractedItems = bulkItemExtractor.ExtractItems(Guid.Parse(rootId), rootParentItemPath, itemIds.Select(Guid.Parse).ToArray(), (IEnumerableFieldFilter)CreateFieldFilter());
+
+            var itemsToExtract = new BlockingCollection<IItemData>();
+            foreach (var extractedItem in extractedItems)
             {
-                itemsToExtract.Add(itemId, cancellationToken);
+                itemsToExtract.Add(extractedItem, cancellationToken);
             }
             itemsToExtract.CompleteAdding();
 
@@ -118,8 +124,7 @@ namespace Unicorn.PowerShell
             {
                 running.Add(Task.Run(() => ItemExtractor(itemsToExtract, cancellationToken), cancellationToken));
             }
-
-            var yamlItems = new List<string>();
+            
             foreach (var t in running)
             {
                 t.Wait(cancellationToken);
@@ -128,6 +133,5 @@ namespace Unicorn.PowerShell
 
             return yamlItems.ToArray();
         }
-
     }
 }
