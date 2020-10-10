@@ -446,14 +446,12 @@ function Copy-RainbowContent {
                         if($percentComplete -ne 100) { Write-Message "[Status] $($percentComplete)% complete ($($processedCounter))" }
                     }
                 } else {
+                    Write-Message "[Pull] $($itemId) added to level $($currentLevel) request" -ForegroundColor Green -Hide:(!$Detailed)
                     $itemIdList.Add($itemId) > $null
                 }
             }
-            if($itemIdList.Count -gt 0) {
-                if($bulkCopy) {
-                    Write-Message "[Pull] Level $($currentLevel) with $($itemIdList.Count) item(s)" -Hide:(!$Detailed)
-                }             
-                Write-Message "[Pull] $($currentLevel)" -ForegroundColor Green -Hide:(!$Detailed)
+            if($itemIdList.Count -gt 0) {           
+                Write-Message "[Pull] Level $($currentLevel) with $($itemIdList.Count) item(s)" -ForegroundColor Green -Hide:(!$Detailed)
                 $runspaceProps = @{
                     ScriptBlock = $sourceScript
                     Pool = $pullPool
@@ -484,25 +482,25 @@ function Copy-RainbowContent {
         foreach($currentRunspace in $currentRunspaces) {
             if(!$currentRunspace.Status.IsCompleted) { continue }
 
-            $response = $currentRunspace.Pipe.EndInvoke($currentRunspace.Status)
+            [System.Management.Automation.PSDataCollection[PSObject]]$response = $currentRunspace.Pipe.EndInvoke($currentRunspace.Status)[0]
 
             if($currentRunspace.Operation -eq "Pull") {
                 [System.Threading.Interlocked]::Increment([ref] $pullCounter) > $null
             } elseif ($currentRunspace.Operation -eq "Push") {
                 [System.Threading.Interlocked]::Increment([ref] $pushCounter) > $null
             }
-            Write-Message "[$($currentRunspace.Operation)] $($currentRunspace.Level) completed" -ForegroundColor Gray -Hide:(!$Detailed)
+            Write-Message "[$($currentRunspace.Operation)] Level $($currentRunspace.Level) completed" -ForegroundColor Gray -Hide:(!$Detailed)
             Write-Message "- Processed in $(([datetime]::Now - $currentRunspace.Time))" -ForegroundColor Gray -Hide:(!$Detailed)
 
-            if($currentRunspace.Operation -eq "Pull") {                
-                if(![string]::IsNullOrEmpty($response) -and [regex]::IsMatch($response,"^---")) {               
-                    $yaml = $response
-                    $processedBytes += $yaml.Length
+            if($currentRunspace.Operation -eq "Pull") {
+                $yaml = $response.Item(0)              
+                if(![string]::IsNullOrEmpty($yaml) -and [regex]::IsMatch($yaml,"^---")) {               
+                    $processedBytes += [System.Text.Encoding]::UTF8.GetByteCount($yaml)
                     if($pushedLookup.Contains(($currentRunspace.Level - 1))) {
-                        Write-Message "[Queue] $($currentRunspace.Level)" -ForegroundColor Cyan -Hide:(!$Detailed)
+                        Write-Message "[Queue] Level $($currentRunspace.Level)" -ForegroundColor Cyan -Hide:(!$Detailed)
                         $pushedLookup[($currentRunspace.Level - 1)].Add([QueueItem]@{"Level"=$currentRunspace.Level;"Yaml"=$yaml;}) > $null
                     } else {               
-                        Write-Message "[Push] $($currentRunspace.Level)" -ForegroundColor Gray -Hide:(!$Detailed)
+                        Write-Message "[Push] Level $($currentRunspace.Level)" -ForegroundColor Gray -Hide:(!$Detailed)
                         $runspaceProps = @{
                             ScriptBlock = $destinationScript
                             Pool = $pushPool
@@ -522,6 +520,7 @@ function Copy-RainbowContent {
 
                 $currentRunspace.Pipe.Dispose()
                 $pullRunspaces.Remove($currentRunspace) > $null
+                $yaml = $null
             }
 
             if($currentRunspace.Operation -eq "Push") {
@@ -552,14 +551,14 @@ function Copy-RainbowContent {
                     $queuedItems.AddRange($pushedLookup[$currentRunspace.Level])
                     $pushedLookup.Remove($currentRunspace.Level) > $null
                     if($bulkCopy) {
-                        Write-Message "[Pull] $($currentRunspace.Level) completed" -ForegroundColor Gray -Hide:(!$Detailed)
+                        Write-Message "[Pull] Level $($currentRunspace.Level) completed" -ForegroundColor Gray -Hide:(!$Detailed)
                     }
                 }
                 if($queuedItems.Count -gt 0) {
                     foreach($queuedItem in $queuedItems) {
                         $level = $queuedItem.Level
-                        Write-Message "[Dequeue] $($level)" -ForegroundColor Cyan -Hide:(!$Detailed)
-                        Write-Message "[Push] $($level)" -ForegroundColor Green -Hide:(!$Detailed)
+                        Write-Message "[Dequeue] Level $($level)" -ForegroundColor Cyan -Hide:(!$Detailed)
+                        Write-Message "[Push] Level $($level)" -ForegroundColor Green -Hide:(!$Detailed)
                         $runspaceProps = @{
                             ScriptBlock = $destinationScript
                             Pool = $pushPool
