@@ -57,7 +57,7 @@ function Copy-RainbowContent {
     }
 
     if($WhatIfPreference) {
-        Write-Message "Following results will be in the WhatIf scenario" -ForegroundColor Yellow
+        Write-Message "[WhatIf] Following results will be in the WhatIf scenario" -ForegroundColor Yellow
     }
    
     $watch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -257,6 +257,10 @@ function Copy-RainbowContent {
         $destinationShallowItemsCount = $destinationItemsHash.Count
         $d1.Stop()
         Write-Message " - Found $($destinationShallowItemsCount) item(s) in $($d1.ElapsedMilliseconds / 1000) seconds"
+    }
+
+    if($overwrite) {
+        $skipItemsHash.Clear()
     }
 
     $pullCounter = 0
@@ -597,6 +601,17 @@ function Copy-RainbowContent {
         $processedCounter = $sourceItemsCount
         $updateCounter = $sourceItemsCount - $skipItemsHash.Count
         $skippedCounter = $skipItemsHash.Count
+
+        while($currentLevel -lt $treeLevels.Count) {
+            Write-Message "[WhatIf] Level $($currentLevel)" -Hide:(!$Detailed)
+            $levelItems = $treeLevels[$currentLevel]
+            foreach($levelItem in $levelItems) {
+                if(!$skipItemsHash.Contains($levelItem.ItemId)) {
+                    Write-Message "[WhatIf] $($levelItem.ItemId) would be updated" -ForegroundColor Yellow -Hide:(!$Detailed)
+                }
+            }
+            $currentLevel++
+        }
     }
 
     Write-Message "[Status] 100% complete ($($processedCounter))"

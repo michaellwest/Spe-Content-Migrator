@@ -28,4 +28,4 @@ $copyProps = @{
 $copyProps["SourceSession"] = $sourceSession
 $copyProps["DestinationSession"] = $destinationSession
 # Default Home
-Copy-RainbowContent @copyProps -RootId "{110D559F-DEA5-42EA-9C1C-8A5DF7E70EF9}"
+Copy-RainbowContent @copyProps -RootId "{110D559F-DEA5-42EA-9C1C-8A5DF7E70EF9}" *>&1 | Tee-Object "$($scriptDirectory)\Migration-DefaultHome.log"
