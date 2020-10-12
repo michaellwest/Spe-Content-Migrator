@@ -55,7 +55,7 @@ My approach is this:
 * Build a list of all unique items to skip.
   * If **Overwrite**, all items are included.
   * If **SkipExisting**, only the existence of the "ItemId" is checked.
-  * If **CompareRevision**, the "ItemId:RevisionId:Language" is checked.
+  * If **CompareRevision**, the "ItemId:RevisionId:ParentId:Language" is checked.
   * If an item is not skipped, all versions/languages of an item are migrated.
 
 ## Performance
