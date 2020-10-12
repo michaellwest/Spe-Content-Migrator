@@ -248,7 +248,7 @@ function Copy-RainbowContent {
             $itemsToSkipHash.ExceptWith($destinationItemLanguageRevisionHash)
             if($itemsToSkipHash.Count -gt 0) {
                 foreach($key in $itemsToSkipHash) {
-                    $itemId = $key.Split(":")[0]
+                    $itemId = $key.Split("+")[0].Split(":")[1]
                     $skipItemsHash.Remove($itemId) > $null
                 }
             }
