@@ -184,7 +184,7 @@ function Copy-RainbowContent {
             "RevisionId"=$sourceRecord.Substring(43,38)
             "ParentId"=$sourceRecord.Substring(84,38)
             "Language"=$sourceRecord.Substring(125, $sourceRecord.Length - 125)
-            "Key"="$($sourceRecord.Substring(2,38)):$($sourceRecord.Substring(43,38)):$($sourceRecord.Substring(125, $sourceRecord.Length - 125))"
+            "Key"=$sourceRecord
         }
         if(!$sourceTree.ContainsKey($shallowItem.ItemId)) {
             $sourceTree[$shallowItem.ItemId] = [System.Collections.Generic.List[ShallowItem]]@()
@@ -230,7 +230,7 @@ function Copy-RainbowContent {
                     "RevisionId"=$destinationRecord.Substring(43,38)
                     "ParentId"=$destinationRecord.Substring(84,38)
                     "Language"=$destinationRecord.Substring(125, $destinationRecord.Length - 125)
-                    "Key"="$($destinationRecord.Substring(2,38)):$($destinationRecord.Substring(43,38)):$($destinationRecord.Substring(125, $destinationRecord.Length - 125))"
+                    "Key"=$destinationRecord
                 }
 
                 if(!$destinationItemsHash.Contains($shallowItem.ItemId)) {
