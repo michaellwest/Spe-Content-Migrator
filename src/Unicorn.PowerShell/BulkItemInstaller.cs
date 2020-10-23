@@ -1,16 +1,17 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml;
-using Rainbow.Filtering;
+﻿using Rainbow.Filtering;
 using Rainbow.Model;
 using Rainbow.Storage.Sc.Deserialization;
 using Sitecore.Data;
 using Sitecore.Data.Engines;
 using Sitecore.Data.Events;
+using Sitecore.Diagnostics;
 using Sitecore.SecurityModel;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
+using System.Xml;
 using Unicorn.Deserialization;
 using Unicorn.Logging;
 
@@ -42,12 +43,22 @@ namespace Unicorn.PowerShell
             if (item == null) return false;
 
             var consoleLogger = new SitecoreLogger();
-
             var deserializer = new DefaultDeserializer(false, new DefaultDeserializerLogger(consoleLogger), CreateFieldFilter());
 
             consoleLogger.Info(item.Path);
-            deserializer.Deserialize(item, null);
-            return true;
+
+            try
+            {
+                deserializer.Deserialize(item, null);
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log.Error($"Failed to install item {item.Path}", ex, typeof(BulkItemInstaller));
+
+                return false;
+            }
         }
 
         private static int ItemInstaller(BlockingCollection<IItemData> itemsToInstall, CancellationToken cancellationToken)
@@ -58,6 +69,7 @@ namespace Unicorn.PowerShell
             using (new EventDisabler())
             using (new SecurityDisabler())
             using (new SyncOperationContext())
+            using (new DatabaseCacheDisabler())
             {
                 while (!itemsToInstall.IsCompleted)
                 {
