@@ -26,9 +26,8 @@ function Copy-RainbowContent {
 
         [switch]$CheckDependencies,
 
-        [switch]$Detailed,
-
-        [switch]$DetailedSkipLogs,
+        [ValidateSet("Normal", "Detailed", "Diagnostic")]
+        [string]$LogLevel,
 
         [switch]$BoringMode,
 
@@ -70,6 +69,8 @@ function Copy-RainbowContent {
     $compareRevision = $CopyBehavior -eq "CompareRevision"
     $overwrite = $CopyBehavior -eq "Overwrite"
     $bulkCopy = $true
+    $isLogLevelDetailed = $LogLevel -eq "Detailed"
+    $isLogLevelDiagnostic = $LogLevel -eq "Diagnostic"
 
     $dependencyScript = {       
         $result = (Test-Path -Path "$($AppPath)\bin\Unicorn.dll") -and (Test-Path -Path "$($AppPath)\bin\Rainbow.dll")
@@ -379,7 +380,7 @@ function Copy-RainbowContent {
     $treeLevels = [System.Collections.Generic.List[System.Collections.Generic.List[ShallowItem]]]@()
     $treeLevelQueue = [System.Collections.Generic.Queue[ShallowItem]]@()
     $treeLevelQueue.Enqueue($sourceTree[$RootParentId][0])
-    Write-Message "- Tree Level Counts $(Get-SpecialText -Character 0x1F334)" -Hide:(!$Detailed)
+    Write-Message "- Tree Level Counts $(Get-SpecialText -Character 0x1F334)" -Hide:(!$isLogLevelDetailed)
     while($treeLevelQueue.Count -gt 0) {
         if($bulkCopy) {
             $currentLevelItems = [System.Collections.Generic.List[ShallowItem]]@()
@@ -393,7 +394,7 @@ function Copy-RainbowContent {
                     $treeLevelQueue.Enqueue($currentLevelChild)
                 }
             }
-            Write-Message " - Level $($treeLevels.Count - 1) : $($currentLevelItems.Count)" -Hide:(!$Detailed)
+            Write-Message " - Level $($treeLevels.Count - 1) : $($currentLevelItems.Count)" -Hide:(!$isLogLevelDetailed)
         } else {
             $batchSize = 10
             $initialTreeLevelCount = $treeLevels.Count
@@ -416,7 +417,7 @@ function Copy-RainbowContent {
                     $treeLevelQueue.Enqueue($currentLevelChild)
                 }
             }
-            Write-Message " - Levels $($initialTreeLevelCount) to $($treeLevels.Count - 1) : $($allcurrentLevelItems.Count)" -Hide:(!$Detailed)
+            Write-Message " - Levels $($initialTreeLevelCount) to $($treeLevels.Count - 1) : $($allcurrentLevelItems.Count)" -Hide:(!$isLogLevelDetailed)
         }
     }
 
@@ -447,19 +448,19 @@ function Copy-RainbowContent {
 
                 if(($skipExisting -or $compareRevision) -and $skipItemsHash.Contains($itemId)) {
                     $processedCounter++
-                    Write-Message "[Skip] $($itemId)" -ForegroundColor Cyan -Hide:(!$Detailed -or !$DetailedSkipLogs)
+                    Write-Message "[Skip] $($itemId)" -ForegroundColor Cyan -Hide:(!$isLogLevelDiagnostic)
                     $skippedCounter++
                     if($processedCounter % $stepCount -eq 0) {
                         $percentComplete = [int][Math]::Round((($processedCounter * 100 / $sourceItemsCount))/10.0) * 10
                         if($percentComplete -ne 100) { Write-Message "[Status] $($percentComplete)% complete ($($processedCounter))" }
                     }
                 } else {
-                    Write-Message "[Pull] $($itemId) added to level $($currentLevel) request" -ForegroundColor Green -Hide:(!$Detailed)
+                    Write-Message "[Pull] $($itemId) added to level $($currentLevel) request" -ForegroundColor Green -Hide:(!$isLogLevelDetailed)
                     $itemIdList.Add($itemId) > $null
                 }
             }
             if($itemIdList.Count -gt 0) {           
-                Write-Message "[Pull] Level $($currentLevel) with $($itemIdList.Count) item(s)" -ForegroundColor Green -Hide:(!$Detailed)
+                Write-Message "[Pull] Level $($currentLevel) with $($itemIdList.Count) item(s)" -ForegroundColor Green -Hide:(!$isLogLevelDetailed)
                 $runspaceProps = @{
                     ScriptBlock = $sourceScript
                     Pool = $pullPool
@@ -476,7 +477,7 @@ function Copy-RainbowContent {
                 }) > $null
             } else {
                 if($bulkCopy) {
-                    Write-Message "[Skip] Level $($currentLevel)" -ForegroundColor Cyan -Hide:(!$Detailed)
+                    Write-Message "[Skip] Level $($currentLevel)" -ForegroundColor Cyan -Hide:(!$isLogLevelDetailed)
                 } 
                 if($pushedLookup.Contains($currentLevel) -and $pushedLookup[$currentLevel].Count -eq 0) {
                     $pushedLookup.Remove($currentLevel)
@@ -497,18 +498,18 @@ function Copy-RainbowContent {
             } elseif ($currentRunspace.Operation -eq "Push") {
                 [System.Threading.Interlocked]::Increment([ref] $pushCounter) > $null
             }
-            Write-Message "[$($currentRunspace.Operation)] Level $($currentRunspace.Level) completed" -ForegroundColor Gray -Hide:(!$Detailed)
-            Write-Message "- Processed in $(([datetime]::Now - $currentRunspace.Time))" -ForegroundColor Gray -Hide:(!$Detailed)
+            Write-Message "[$($currentRunspace.Operation)] Level $($currentRunspace.Level) completed" -ForegroundColor Gray -Hide:(!$isLogLevelDetailed)
+            Write-Message "- Processed in $(([datetime]::Now - $currentRunspace.Time))" -ForegroundColor Gray -Hide:(!$isLogLevelDetailed)
 
             if($currentRunspace.Operation -eq "Pull") {
                 $yaml = $response.Item(0)              
                 if(![string]::IsNullOrEmpty($yaml) -and [regex]::IsMatch($yaml,"^---")) {               
                     $processedBytes += [System.Text.Encoding]::UTF8.GetByteCount($yaml)
                     if($pushedLookup.Contains(($currentRunspace.Level - 1))) {
-                        Write-Message "[Queue] Level $($currentRunspace.Level)" -ForegroundColor Cyan -Hide:(!$Detailed)
+                        Write-Message "[Queue] Level $($currentRunspace.Level)" -ForegroundColor Cyan -Hide:(!$isLogLevelDetailed)
                         $pushedLookup[($currentRunspace.Level - 1)].Add([QueueItem]@{"Level"=$currentRunspace.Level;"Yaml"=$yaml;}) > $null
                     } else {               
-                        Write-Message "[Push] Level $($currentRunspace.Level)" -ForegroundColor Gray -Hide:(!$Detailed)
+                        Write-Message "[Push] Level $($currentRunspace.Level)" -ForegroundColor Gray -Hide:(!$isLogLevelDetailed)
                         $runspaceProps = @{
                             ScriptBlock = $destinationScript
                             Pool = $pushPool
@@ -534,7 +535,7 @@ function Copy-RainbowContent {
             if($currentRunspace.Operation -eq "Push") {
                 if(![string]::IsNullOrEmpty($response)) {
                     $feedback = $response | ConvertFrom-Json
-                    Write-Message "- Imported $($feedback.ImportedItems)/$($feedback.TotalItems)" -ForegroundColor Gray -Hide:(!$Detailed)
+                    Write-Message "- Imported $($feedback.ImportedItems)/$($feedback.TotalItems)" -ForegroundColor Gray -Hide:(!$isLogLevelDetailed)
                     if($feedback.ImportedItems -gt 0) {
                         1..$feedback.ImportedItems | ForEach-Object { [System.Threading.Interlocked]::Increment([ref] $updateCounter) > $null }
                     }
@@ -549,8 +550,8 @@ function Copy-RainbowContent {
                     }
                     if($feedback.ErrorCount -gt 0) {
                         [System.Threading.Interlocked]::Increment([ref] $errorCounter) > $null
-                        Write-Message "- Errored $($feedback.ErrorCount)" -ForegroundColor Red -Hide:(!$Detailed)
-                        Write-Message " - $($feedback.ErrorMessages)" -ForegroundColor Red -Hide:(!$Detailed)
+                        Write-Message "- Errored $($feedback.ErrorCount)" -ForegroundColor Red -Hide:(!$isLogLevelDetailed)
+                        Write-Message " - $($feedback.ErrorMessages)" -ForegroundColor Red -Hide:(!$isLogLevelDetailed)
                     }
                 }
                 
@@ -559,14 +560,14 @@ function Copy-RainbowContent {
                     $queuedItems.AddRange($pushedLookup[$currentRunspace.Level])
                     $pushedLookup.Remove($currentRunspace.Level) > $null
                     if($bulkCopy) {
-                        Write-Message "[Pull] Level $($currentRunspace.Level) completed" -ForegroundColor Gray -Hide:(!$Detailed)
+                        Write-Message "[Pull] Level $($currentRunspace.Level) completed" -ForegroundColor Gray -Hide:(!$isLogLevelDetailed)
                     }
                 }
                 if($queuedItems.Count -gt 0) {
                     foreach($queuedItem in $queuedItems) {
                         $level = $queuedItem.Level
-                        Write-Message "[Dequeue] Level $($level)" -ForegroundColor Cyan -Hide:(!$Detailed)
-                        Write-Message "[Push] Level $($level)" -ForegroundColor Green -Hide:(!$Detailed)
+                        Write-Message "[Dequeue] Level $($level)" -ForegroundColor Cyan -Hide:(!$isLogLevelDetailed)
+                        Write-Message "[Push] Level $($level)" -ForegroundColor Green -Hide:(!$isLogLevelDetailed)
                         $runspaceProps = @{
                             ScriptBlock = $destinationScript
                             Pool = $pushPool
@@ -607,11 +608,11 @@ function Copy-RainbowContent {
         $skippedCounter = $skipItemsHash.Count
 
         while($currentLevel -lt $treeLevels.Count) {
-            Write-Message "[WhatIf] Level $($currentLevel)" -Hide:(!$Detailed)
+            Write-Message "[WhatIf] Level $($currentLevel)" -Hide:(!$isLogLevelDetailed)
             $levelItems = $treeLevels[$currentLevel]
             foreach($levelItem in $levelItems) {
                 if(!$skipItemsHash.Contains($levelItem.ItemId)) {
-                    Write-Message "[WhatIf] $($levelItem.ItemId) would be updated" -ForegroundColor Yellow -Hide:(!$Detailed)
+                    Write-Message "[WhatIf] $($levelItem.ItemId) would be updated" -ForegroundColor Yellow -Hide:(!$isLogLevelDetailed)
                 }
             }
             $currentLevel++

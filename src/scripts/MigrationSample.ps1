@@ -20,9 +20,10 @@ $copyProps = @{
     "Recurse"=$true
     "RemoveNotInSource"=$false
     "ClearAllCaches"=$true
-    "Detailed"=$true
+    "LogLevel"="Normal"
     "CheckDependencies"=$false
     "BoringMode"=$false
+    "FailOnError"=$false
 }
 
 $copyProps["SourceSession"] = $sourceSession
