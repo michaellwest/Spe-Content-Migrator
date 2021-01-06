@@ -1,6 +1,7 @@
 ﻿using Rainbow.Filtering;
 using Rainbow.Model;
 using Rainbow.Storage.Sc.Deserialization;
+using Sitecore.Configuration;
 using Sitecore.Data;
 using Sitecore.Data.Engines;
 using Sitecore.Data.Events;
@@ -49,7 +50,10 @@ namespace Unicorn.PowerShell
 
             try
             {
-                deserializer.Deserialize(item, null);
+                using (new SettingsSwitcher("AllowDuplicateItemNamesOnSameLevel", "true"))
+                {
+                    deserializer.Deserialize(item, null);
+                }
 
                 return true;
             }
