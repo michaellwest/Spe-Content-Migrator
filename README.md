@@ -34,9 +34,10 @@ $copyProps = @{
     "Recurse"=$true
     "RemoveNotInSource"=$false
     "ClearAllCaches"=$true
-    "Detailed"=$true
+    "LogLevel"="Detailed"
     "CheckDependencies"=$false
     "BoringMode"=$false
+    "FailOnError"=$false
 }
 
 $copyProps["SourceSession"] = $sourceSession
@@ -57,6 +58,14 @@ My approach is this:
   * If **SkipExisting**, only the existence of the "ItemId" is checked.
   * If **CompareRevision**, the "ItemId:RevisionId:ParentId:Language" is checked.
   * If an item is not skipped, all versions/languages of an item are migrated.
+
+## Logging
+
+Depending on the value of the `LogLevel` parameter you will get different detalization of log output:
+
+* If **Normal**, minimal output (such as progress and result statistics)
+* If **Detailed**, details on which items were added to the content copy process, and extra information about tree levels
+* If **Diagnostic**, information about skipped items (items which were compared but excluded from the copy process)
 
 ## Performance
 

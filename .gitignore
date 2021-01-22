@@ -1,4 +1,12 @@
+.vs/
 bin/
 obj/
 packages/
 src/scripts/Tester.ps1
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.DotSettings
