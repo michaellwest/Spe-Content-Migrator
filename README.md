@@ -11,6 +11,35 @@ Prerequisites:
 * Unicorn and Rainbow are deployed to your Sitecore instances.
 * Spe 6.0+ is installed and SPE Remoting is enabled on your Sitecore instances.
 
+Example patch for SPE
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration xmlns:patch="http://www.sitecore.net/xmlconfig/" xmlns:set="http://www.sitecore.net/xmlconfig/set/" xmlns:role="http://www.sitecore.net/xmlconfig/role/" xmlns:environment="http://www.sitecore.net/xmlconfig/environment/">
+  <sitecore role:require="Standalone or ContentManagement">
+    <powershell>
+      <services>
+        <remoting set:enabled="true" />
+        <restfulv2 set:enabled="true" />
+        <fileDownload set:enabled="true" environment:require="Dev" />
+        <fileUpload set:enabled="true" environment:require="Dev" />
+        <mediaDownload set:enabled="true" environment:require="Dev" />
+        <mediaUpload set:enabled="true" environment:require="Dev" />
+        <remoting set:enabled="true" environment:require="Dev">
+          <authorization>
+            <add Permission="Allow" IdentityType="Role" Identity="sitecore\IsAdministrator" />
+          </authorization>
+        </remoting>
+      </services>
+      <!-- If you want to use the shared secret, be sure the user is enabled in Sitecore and is a member of the PowerShellRemotingAPI role. -->
+      <authenticationProvider>
+        <sharedSecret>SUPER_SECRET_PASSWORD</sharedSecret>
+      </authenticationProvider>
+    </powershell>
+  </sitecore>
+</configuration>
+```
+
 Running:
 
 ```powershell
