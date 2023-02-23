@@ -17,6 +17,8 @@ function Copy-RainbowContent {
 
         [switch]$Recurse,
 
+        [int]$RecurseDepth = 0,
+
         [ValidateSet("SkipExisting", "Overwrite", "CompareRevision")]
         [string]$CopyBehavior,
 
@@ -128,16 +130,27 @@ function Copy-RainbowContent {
     Write-Message "[Options] RootId = $($RootId); Recurse = $($Recurse);"
     Write-Message "[Options] CopyBehavior = $($CopyBehavior); RemoveNotInSource = $($RemoveNotInSource);"
 
+    if ($RecurseDepth -gt 0) {
+        Write-Message "[Options] RecurseDepth = $($RecurseDepth);"
+    }
+
     $compareScript = {
         $rootId = "{ROOT_ID}"
         $recurseChildren = [bool]::Parse("{RECURSE_CHILDREN}")
+        $recurseDepthLevel = [int]::Parse("{RECURSE_DEPTH_LEVEL}")
+        
+        $whereLevelClause = ""
+        if ($recurseDepthLevel -gt 0) {
+            $whereLevelClause = "WHERE ci.[Level] <= $($recurseDepthLevel - 1)"
+        }
+
         Import-Function -Name Invoke-SqlCommand
         $connection = [Sitecore.Configuration.Settings]::GetConnectionString("master")
 
         $revisionFieldId = "{8CDC337E-A112-42FB-BBB4-4143751E123F}"
         if($recurseChildren) {
             $query = "
-                WITH [ContentQuery] AS (SELECT [ID], [Name], [ParentID] FROM [dbo].[Items] WHERE ID='$($rootId)' UNION ALL SELECT  i.[ID], i.[Name], i.[ParentID] FROM [dbo].[Items] i INNER JOIN [ContentQuery] ci ON ci.ID = i.[ParentID])
+                WITH [ContentQuery] AS (SELECT [ID], [Name], [ParentID], 0 as [Level] FROM [dbo].[Items] WHERE ID='$($rootId)' UNION ALL SELECT  i.[ID], i.[Name], i.[ParentID], ci.[Level] + 1 FROM [dbo].[Items] i INNER JOIN [ContentQuery] ci ON ci.ID = i.[ParentID] $whereLevelClause)
                 SELECT cq.[ID], vf.[Value] AS [Revision], cq.[ParentID], vf.[Language] FROM [ContentQuery] cq INNER JOIN dbo.[VersionedFields] vf ON cq.[ID] = vf.[ItemId] WHERE vf.[FieldId] = '$($revisionFieldId)' AND vf.[Language] != '' AND vf.[Version] = (SELECT MAX(vf2.[Version]) FROM dbo.[VersionedFields] vf2 WHERE vf2.[ItemId] = cq.[Id])
             "
         } else {
@@ -152,7 +165,7 @@ function Copy-RainbowContent {
             $itemIds -join "|"
         }
     }
-    $compareScript = [scriptblock]::Create($compareScript.ToString().Replace("{ROOT_ID}", $RootId).Replace("{RECURSE_CHILDREN}", $recurseChildren))
+    $compareScript = [scriptblock]::Create($compareScript.ToString().Replace("{ROOT_ID}", $RootId).Replace("{RECURSE_CHILDREN}", $recurseChildren).Replace("{RECURSE_DEPTH_LEVEL}", $RecurseDepth))
     
     class ShallowItem {
         [string]$ItemId
